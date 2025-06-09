@@ -60,12 +60,15 @@ def newton_finite_difference_polynomial(xs, ys, n):
 
 
 def gauss_polynomial(xs, ys, n):
+    n = len(xs) - 1
     alpha_ind = n // 2
-    fin_difs = [ys[:]]
+    fin_difs = []
+    fin_difs.append(ys[:])
 
-    for k in range(1, n):
+    for k in range(1, n + 1):
         last = fin_difs[-1][:]
-        fin_difs.append([last[i + 1] - last[i] for i in range(n - k)])
+        fin_difs.append(
+            [last[i + 1] - last[i] for i in range(n - k + 1)])
 
     h = xs[1] - xs[0]
     dts1 = [0, -1, 1, -2, 2, -3, 3, -4, 4]
@@ -74,26 +77,27 @@ def gauss_polynomial(xs, ys, n):
         reduce(lambda a, b: a * b,
                [(x - xs[alpha_ind]) / h + dts1[j] for j in range(k)])
         * fin_difs[k][len(fin_difs[k]) // 2] / factorial(k)
-        for k in range(1, n)
-    ])
+        for k in range(1, n + 1)])
 
     f2 = lambda x: ys[alpha_ind] + sum([
         reduce(lambda a, b: a * b,
                [(x - xs[alpha_ind]) / h - dts1[j] for j in range(k)])
         * fin_difs[k][len(fin_difs[k]) // 2 - (1 - len(fin_difs[k]) % 2)] / factorial(k)
-        for k in range(1, n)
-    ])
+        for k in range(1, n + 1)])
 
     return lambda x: f1(x) if x > xs[alpha_ind] else f2(x)
 
 
 def stirling_polynomial(xs, ys, n):
+    n = len(xs) - 1
     alpha_ind = n // 2
-    fin_difs = [ys[:]]
+    fin_difs = []
+    fin_difs.append(ys[:])
 
-    for k in range(1, n):
+    for k in range(1, n + 1):
         last = fin_difs[-1][:]
-        fin_difs.append([last[i + 1] - last[i] for i in range(n - k)])
+        fin_difs.append(
+            [last[i + 1] - last[i] for i in range(n - k + 1)])
 
     h = xs[1] - xs[0]
     dts1 = [0, -1, 1, -2, 2, -3, 3, -4, 4]
@@ -102,41 +106,42 @@ def stirling_polynomial(xs, ys, n):
         reduce(lambda a, b: a * b,
                [(x - xs[alpha_ind]) / h + dts1[j] for j in range(k)])
         * fin_difs[k][len(fin_difs[k]) // 2] / factorial(k)
-        for k in range(1, n)
-    ])
+        for k in range(1, n + 1)])
 
     f2 = lambda x: ys[alpha_ind] + sum([
         reduce(lambda a, b: a * b,
                [(x - xs[alpha_ind]) / h - dts1[j] for j in range(k)])
         * fin_difs[k][len(fin_difs[k]) // 2 - (1 - len(fin_difs[k]) % 2)] / factorial(k)
-        for k in range(1, n)
-    ])
+        for k in range(1, n + 1)])
 
     return lambda x: (f1(x) + f2(x)) / 2
 
 
 def bessel_polynomial(xs, ys, n):
+    n = len(xs) - 1
     alpha_ind = n // 2
-    fin_difs = [ys[:]]
+    fin_difs = []
+    fin_difs.append(ys[:])
 
-    for k in range(1, n):
+    for k in range(1, n + 1):
         last = fin_difs[-1][:]
-        fin_difs.append([last[i + 1] - last[i] for i in range(n - k)])
+        fin_difs.append(
+            [last[i + 1] - last[i] for i in range(n - k + 1)])
 
     h = xs[1] - xs[0]
-    dts1 = [0, -1, 1, -2, 2, -3, 3]
+    dts1 = [0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5]
 
-    return lambda x: (ys[alpha_ind] + ys[alpha_ind + 1]) / 2 + sum([
+    return lambda x: (ys[alpha_ind] + ys[alpha_ind]) / 2 + sum([
         reduce(lambda a, b: a * b,
                [(x - xs[alpha_ind]) / h + dts1[j] for j in range(k)])
         * fin_difs[k][len(fin_difs[k]) // 2] / factorial(2 * k) +
 
-        ((x - xs[alpha_ind]) / h - 0.5) *
+        ((x - xs[alpha_ind]) / h - 1 / 2) *
         reduce(lambda a, b: a * b,
                [(x - xs[alpha_ind]) / h + dts1[j] for j in range(k)])
         * fin_difs[k][len(fin_difs[k]) // 2] / factorial(2 * k + 1)
-        for k in range(1, n // 2)
-    ])
+
+        for k in range(1, n + 1)])
 
 
 def draw_plot(xs, ys, x_point, interpolation_func, method_name):
