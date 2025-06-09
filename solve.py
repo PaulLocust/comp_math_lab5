@@ -1,6 +1,5 @@
-from copy import copy
 from functools import reduce
-from math import factorial, sin, sqrt
+from math import factorial
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -88,62 +87,6 @@ def gauss_polynomial(xs, ys, n):
     return lambda x: f1(x) if x > xs[alpha_ind] else f2(x)
 
 
-def stirling_polynomial(xs, ys, n):
-    n = len(xs) - 1
-    alpha_ind = n // 2
-    fin_difs = []
-    fin_difs.append(ys[:])
-
-    for k in range(1, n + 1):
-        last = fin_difs[-1][:]
-        fin_difs.append(
-            [last[i + 1] - last[i] for i in range(n - k + 1)])
-
-    h = xs[1] - xs[0]
-    dts1 = [0, -1, 1, -2, 2, -3, 3, -4, 4]
-
-    f1 = lambda x: ys[alpha_ind] + sum([
-        reduce(lambda a, b: a * b,
-               [(x - xs[alpha_ind]) / h + dts1[j] for j in range(k)])
-        * fin_difs[k][len(fin_difs[k]) // 2] / factorial(k)
-        for k in range(1, n + 1)])
-
-    f2 = lambda x: ys[alpha_ind] + sum([
-        reduce(lambda a, b: a * b,
-               [(x - xs[alpha_ind]) / h - dts1[j] for j in range(k)])
-        * fin_difs[k][len(fin_difs[k]) // 2 - (1 - len(fin_difs[k]) % 2)] / factorial(k)
-        for k in range(1, n + 1)])
-
-    return lambda x: (f1(x) + f2(x)) / 2
-
-
-def bessel_polynomial(xs, ys, n):
-    n = len(xs) - 1
-    alpha_ind = n // 2
-    fin_difs = []
-    fin_difs.append(ys[:])
-
-    for k in range(1, n + 1):
-        last = fin_difs[-1][:]
-        fin_difs.append(
-            [last[i + 1] - last[i] for i in range(n - k + 1)])
-
-    h = xs[1] - xs[0]
-    dts1 = [0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5]
-
-    return lambda x: (ys[alpha_ind] + ys[alpha_ind]) / 2 + sum([
-        reduce(lambda a, b: a * b,
-               [(x - xs[alpha_ind]) / h + dts1[j] for j in range(k)])
-        * fin_difs[k][len(fin_difs[k]) // 2] / factorial(2 * k) +
-
-        ((x - xs[alpha_ind]) / h - 1 / 2) *
-        reduce(lambda a, b: a * b,
-               [(x - xs[alpha_ind]) / h + dts1[j] for j in range(k)])
-        * fin_difs[k][len(fin_difs[k]) // 2] / factorial(2 * k + 1)
-
-        for k in range(1, n + 1)])
-
-
 def draw_plot(xs, ys, x_point, interpolation_func, method_name):
     x_vals = np.linspace(xs[0] - 0.1, xs[-1] + 0.1, 1000)
     y_vals = [interpolation_func(x) for x in x_vals]
@@ -171,9 +114,7 @@ def solve(xs, ys, x, n, return_plots=False):
         ("Многочлен Лагранжа", lagrange_polynomial),
         ("Многочлен Ньютона (раздел. разности)", newton_divided_difference_polynomial),
         ("Многочлен Ньютона (конеч. разности)", newton_finite_difference_polynomial),
-        ("Многочлен Гаусса", gauss_polynomial),
-        ("Многочлен Стирлинга", stirling_polynomial),
-        ("Многочлен Бесселя", bessel_polynomial)
+        ("Многочлен Гаусса", gauss_polynomial)
     ]
 
     h = xs[1] - xs[0]
@@ -187,9 +128,7 @@ def solve(xs, ys, x, n, return_plots=False):
             continue
         if method == newton_divided_difference_polynomial and finite_diff_valid:
             continue
-        if method in [gauss_polynomial, stirling_polynomial] and even_n:
-            continue
-        if method == bessel_polynomial and not even_n:
+        if method in [gauss_polynomial] and even_n:
             continue
 
         P = method(xs, ys, n)
