@@ -1,6 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog
-from tkinter import ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 from solve import solve
 from math import sin, sqrt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -11,7 +10,7 @@ class InterpolationApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Лабораторная: Интерполяция функций")
-        self.root.geometry("1000x700")
+        self.root.geometry("1000x800")
 
         self.x = None
         self.xs = []
@@ -26,7 +25,7 @@ class InterpolationApp:
         frame.pack(pady=10)
 
         tk.Button(frame, text="Загрузить из файла", command=self.load_from_file).grid(row=0, column=0, padx=5)
-        tk.Button(frame, text="Ввод вручную", command=self.manual_input).grid(row=0, column=1, padx=5)
+        tk.Button(frame, text="Ввод вручную", command=self.show_manual_input_window).grid(row=0, column=1, padx=5)
         tk.Button(frame, text="Использовать пример", command=self.use_example).grid(row=0, column=2, padx=5)
         tk.Button(frame, text="Сгенерировать по функции", command=self.generate_function).grid(row=0, column=3, padx=5)
 
@@ -82,25 +81,145 @@ class InterpolationApp:
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка при чтении файла: {e}")
 
-    def manual_input(self):
+    def show_manual_input_window(self):
+        """Показывает окно для ручного ввода данных"""
+        self.manual_window = tk.Toplevel(self.root)
+        self.manual_window.title("Ручной ввод данных")
+        self.manual_window.geometry("600x500")
+        self.manual_window.grab_set()  # Делает окно модальным
+
+        # Основной фрейм для содержимого
+        main_frame = tk.Frame(self.manual_window)
+        main_frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+
+        # Поле для ввода x
+        tk.Label(main_frame, text="Точка интерполяции (x):").pack(anchor='w', pady=(0, 5))
+        self.x_entry = tk.Entry(main_frame)
+        self.x_entry.pack(fill=tk.X, pady=(0, 10))
+
+        # Таблица для ввода точек
+        tk.Label(main_frame, text="Введите узлы интерполяции (x и y):").pack(anchor='w')
+
+        # Фрейм для таблицы с прокруткой
+        table_frame = tk.Frame(main_frame)
+        table_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+
+        # Создаем Treeview для таблицы
+        self.tree = ttk.Treeview(table_frame, columns=("x", "y"), show="headings", height=8)
+        self.tree.heading("x", text="x")
+        self.tree.heading("y", text="y")
+        self.tree.column("x", width=150)
+        self.tree.column("y", width=150)
+
+        # Добавляем прокрутку
+        scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+
+        scrollbar.pack(side="right", fill="y")
+        self.tree.pack(side="left", fill="both", expand=True)
+
+        # Кнопки управления
+        btn_frame = tk.Frame(main_frame)
+        btn_frame.pack(pady=10)
+
+        tk.Button(btn_frame, text="Добавить строку", command=self.add_row).pack(side="left", padx=5)
+        tk.Button(btn_frame, text="Удалить строку", command=self.delete_row).pack(side="left", padx=5)
+        tk.Button(btn_frame, text="Сохранить", command=self.save_manual_input).pack(side="left", padx=5)
+        tk.Button(btn_frame, text="Отмена", command=self.manual_window.destroy).pack(side="left", padx=5)
+
+        # Добавляем 5 пустых строк по умолчанию
+        for _ in range(5):
+            self.tree.insert("", "end", values=("", ""))
+
+        # Разрешаем редактирование ячеек
+        self.tree.bind("<Double-1>", self.on_double_click)
+
+    def on_double_click(self, event):
+        """Обработчик двойного клика для редактирования ячеек"""
+        region = self.tree.identify("region", event.x, event.y)
+        if region == "cell":
+            column = self.tree.identify_column(event.x)
+            item = self.tree.identify_row(event.y)
+
+            # Получаем текущее значение
+            col_index = int(column[1]) - 1
+            current_value = self.tree.item(item, "values")[col_index]
+
+            # Создаем поле для редактирования
+            entry = tk.Entry(self.manual_window)
+            entry.insert(0, current_value)
+            entry.select_range(0, tk.END)
+            entry.focus()
+
+            def save_edit(event):
+                """Сохраняет изменения в ячейке"""
+                new_value = entry.get()
+                values = list(self.tree.item(item, "values"))
+                values[col_index] = new_value
+                self.tree.item(item, values=values)
+                entry.destroy()
+
+            entry.bind("<Return>", save_edit)
+            entry.bind("<FocusOut>", lambda e: entry.destroy())
+
+            # Размещаем поле редактирования поверх ячейки
+            x, y, width, height = self.tree.bbox(item, column)
+            entry.place(x=x, y=y, width=width, height=height)
+
+    def add_row(self):
+        """Добавляет новую строку в таблицу"""
+        self.tree.insert("", "end", values=("", ""))
+
+    def delete_row(self):
+        """Удаляет выбранную строку из таблицы"""
+        selected_item = self.tree.selection()
+        if selected_item:
+            self.tree.delete(selected_item)
+
+    def save_manual_input(self):
+        """Сохраняет введенные данные"""
         try:
-            self.x = float(simpledialog.askstring("Точка интерполяции", "Введите x:"))
-            self.xs.clear()
-            self.ys.clear()
-            while True:
-                point = simpledialog.askstring("Введите точку", "Введите x и y через пробел (или пусто для окончания):")
-                if not point:
-                    break
-                parts = point.strip().split()
-                if len(parts) == 2:
-                    self.xs.append(float(parts[0]))
-                    self.ys.append(float(parts[1]))
+            # Проверяем точку интерполяции
+            if not self.x_entry.get():
+                raise ValueError("Не введена точка интерполяции x")
+
+            self.x = float(self.x_entry.get())
+
+            # Получаем все точки из таблицы
+            self.xs = []
+            self.ys = []
+
+            for child in self.tree.get_children():
+                values = self.tree.item(child)["values"]
+                if len(values) == 2:
+                    x_val, y_val = values[0], values[1]
+                    if x_val and y_val:  # Пропускаем пустые строки
+                        try:
+                            self.xs.append(float(x_val))
+                            self.ys.append(float(y_val))
+                        except ValueError:
+                            raise ValueError(f"Некорректные данные в строке: x={x_val}, y={y_val}")
+
+            # Проверяем минимальное количество точек
             if len(self.xs) < 2:
-                raise ValueError("Недостаточно точек")
+                raise ValueError("Необходимо ввести как минимум 2 точки")
+
+            # Проверяем уникальность x
+            if len(set(self.xs)) != len(self.xs):
+                raise ValueError("Значения x не должны повторяться")
+
+            # Проверяем сортировку
+            if self.xs != sorted(self.xs):
+                raise ValueError("Значения x должны быть отсортированы по возрастанию")
+
             self.log("Данные успешно введены вручную")
             self.solve_btn.config(state=tk.NORMAL)
+            self.manual_window.destroy()
+
+        except ValueError as e:
+            messagebox.showerror("Ошибка ввода", str(e), parent=self.manual_window)
         except Exception as e:
-            messagebox.showerror("Ошибка", f"Ошибка при вводе: {e}")
+            messagebox.showerror("Ошибка", f"Ошибка при сохранении данных: {e}", parent=self.manual_window)
 
     def use_example(self):
         self.x = 0.502
