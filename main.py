@@ -16,6 +16,8 @@ class InterpolationApp:
         self.x = None
         self.xs = []
         self.ys = []
+        self.figures = []
+        self.current_figure_index = 0
 
         self.create_widgets()
 
@@ -28,11 +30,25 @@ class InterpolationApp:
         tk.Button(frame, text="Использовать пример", command=self.use_example).grid(row=0, column=2, padx=5)
         tk.Button(frame, text="Сгенерировать по функции", command=self.generate_function).grid(row=0, column=3, padx=5)
 
-        self.solve_btn = tk.Button(self.root, text="Решить и Построить графики", command=self.process, state=tk.DISABLED)
+        self.solve_btn = tk.Button(self.root, text="Решить и Построить графики", command=self.process,
+                                   state=tk.DISABLED)
         self.solve_btn.pack(pady=20)
 
         self.log_text = tk.Text(self.root, height=15, wrap=tk.WORD)
         self.log_text.pack(padx=10, fill=tk.BOTH, expand=False)
+
+        # Фрейм для навигации по графикам
+        self.nav_frame = tk.Frame(self.root)
+        self.nav_frame.pack(pady=5)
+
+        self.prev_btn = tk.Button(self.nav_frame, text="← Предыдущий", command=self.show_prev_figure, state=tk.DISABLED)
+        self.prev_btn.pack(side=tk.LEFT, padx=5)
+
+        self.next_btn = tk.Button(self.nav_frame, text="Следующий →", command=self.show_next_figure, state=tk.DISABLED)
+        self.next_btn.pack(side=tk.LEFT, padx=5)
+
+        self.figure_label = tk.Label(self.nav_frame, text="График 1 из 1")
+        self.figure_label.pack(side=tk.LEFT, padx=10)
 
         self.plot_frame = tk.Frame(self.root)
         self.plot_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -132,17 +148,57 @@ class InterpolationApp:
         for i, func in enumerate(funcs, 1):
             tk.Radiobutton(popup, text=func, variable=func_var, value=i).pack(anchor='w')
 
-        for label_text, entry_default in [("Число узлов:", "5"), ("x0:", "0.0"), ("xn:", "1.0"), ("x (точка интерполяции):", "0.5")]:
+        for label_text, entry_default in [("Число узлов:", "5"), ("x0:", "0.0"), ("xn:", "1.0"),
+                                          ("x (точка интерполяции):", "0.5")]:
             tk.Label(popup, text=label_text).pack()
             entry = tk.Entry(popup)
             entry.insert(0, entry_default)
             entry.pack()
-            if label_text == "Число узлов:": entry_n = entry
-            elif label_text == "x0:": entry_x0 = entry
-            elif label_text == "xn:": entry_xn = entry
-            elif label_text.startswith("x "): entry_x = entry
+            if label_text == "Число узлов:":
+                entry_n = entry
+            elif label_text == "x0:":
+                entry_x0 = entry
+            elif label_text == "xn:":
+                entry_xn = entry
+            elif label_text.startswith("x "):
+                entry_x = entry
 
         tk.Button(popup, text="ОК", command=on_ok).pack(pady=10)
+
+    def clear_plot_frame(self):
+        """Очищает фрейм с графиком"""
+        for widget in self.plot_frame.winfo_children():
+            widget.destroy()
+
+    def show_current_figure(self):
+        """Отображает текущий график"""
+        self.clear_plot_frame()
+
+        if not self.figures:
+            return
+
+        canvas = FigureCanvasTkAgg(self.figures[self.current_figure_index], master=self.plot_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, pady=10)
+
+        # Обновляем информацию о текущем графике
+        self.figure_label.config(text=f"График {self.current_figure_index + 1} из {len(self.figures)}")
+
+        # Обновляем состояние кнопок навигации
+        self.prev_btn.config(state=tk.NORMAL if self.current_figure_index > 0 else tk.DISABLED)
+        self.next_btn.config(state=tk.NORMAL if self.current_figure_index < len(self.figures) - 1 else tk.DISABLED)
+
+    def show_prev_figure(self):
+        """Показывает предыдущий график"""
+        if self.current_figure_index > 0:
+            self.current_figure_index -= 1
+            self.show_current_figure()
+
+    def show_next_figure(self):
+        """Показывает следующий график"""
+        if self.current_figure_index < len(self.figures) - 1:
+            self.current_figure_index += 1
+            self.show_current_figure()
 
     def process(self):
         if not self.xs or not self.ys:
@@ -156,8 +212,9 @@ class InterpolationApp:
             return
 
         self.log_text.delete("1.0", tk.END)
-        for widget in self.plot_frame.winfo_children():
-            widget.destroy()
+        self.clear_plot_frame()
+        self.figures = []
+        self.current_figure_index = 0
 
         self.log("Выполнение интерполяции...\n")
 
@@ -165,10 +222,16 @@ class InterpolationApp:
             result_text, figures = solve(self.xs, self.ys, self.x, len(self.xs), return_plots=True)
             self.log(result_text)
 
-            for fig in figures:
-                canvas = FigureCanvasTkAgg(fig, master=self.plot_frame)
-                canvas.draw()
-                canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, pady=10)
+            self.figures = figures
+            if self.figures:
+                self.show_current_figure()
+                # Активируем кнопки навигации если есть несколько графиков
+                if len(self.figures) > 1:
+                    self.prev_btn.config(state=tk.NORMAL)
+                    self.next_btn.config(state=tk.NORMAL)
+                else:
+                    self.prev_btn.config(state=tk.DISABLED)
+                    self.next_btn.config(state=tk.DISABLED)
 
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка решения: {e}")
