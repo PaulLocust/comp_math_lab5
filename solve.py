@@ -156,7 +156,7 @@ def draw_plot(xs, ys, x_point, interpolation_func, method_name):
     plt.show()
 
 
-def solve(xs, ys, x, n):
+def solve(xs, ys, x, n, return_plots=False):
     results = ""
     delta_y = finite_differences(ys)
     results += print_finite_differences_table(delta_y) + "\n"
@@ -175,8 +175,9 @@ def solve(xs, ys, x, n):
     finite_diff_valid = all(abs(xs[i] - xs[i - 1] - h) < 1e-5 for i in range(1, n))
     even_n = n % 2 == 0
 
+    figures = []
+
     for name, method in methods:
-        # Условия применимости:
         if method == newton_finite_difference_polynomial and not finite_diff_valid:
             continue
         if method == newton_divided_difference_polynomial and finite_diff_valid:
@@ -190,6 +191,27 @@ def solve(xs, ys, x, n):
         y_val = P(x)
         results += f"{name}:\nP({x}) = {y_val:.6f}\n" + "-" * 60 + "\n"
 
-        draw_plot(xs, ys, x, P, name)
+        if return_plots:
+            fig = create_plot(xs, ys, x, P, name)
+            figures.append(fig)
+        else:
+            draw_plot(xs, ys, x, P, name)
 
-    return results
+    return (results, figures) if return_plots else results
+
+
+def create_plot(xs, ys, x_point, interpolation_func, method_name):
+    x_vals = np.linspace(xs[0] - 0.1, xs[-1] + 0.1, 1000)
+    y_vals = [interpolation_func(x) for x in x_vals]
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.plot(x_vals, y_vals, label=f"{method_name}", color="green")
+    ax.scatter(xs, ys, color="blue", label="Узлы интерполяции")
+    ax.scatter([x_point], [interpolation_func(x_point)], color="red", label=f"P({x_point:.3f})")
+    ax.set_title(f"Интерполяция методом: {method_name}")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.grid(True)
+    ax.legend()
+    fig.tight_layout()
+    return fig
