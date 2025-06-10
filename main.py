@@ -296,9 +296,9 @@ class InterpolationApp:
 
     def use_example(self):
         """Загружает пример данных"""
-        self.x = 0.502
-        self.xs = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8]
-        self.ys = [1.5320, 2.5356, 3.5406, 4.5462, 5.5504, 6.5559, 7.5594]
+        self.x = 1.168
+        self.xs = [1.1, 1.25, 1.4, 1.55, 1.7, 1.85, 2]
+        self.ys = [0.2234, 1.2438, 2.2644, 3.2984, 4.3222, 5.3516, 6.3867]
         self.log("Загружен пример")
         self.solve_btn.config(state=tk.NORMAL)
 
@@ -376,10 +376,8 @@ class InterpolationApp:
         canvas.draw()
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, pady=10)
 
-        # Обновляем информацию о текущем графике
         self.figure_label.config(text=f"График {self.current_figure_index + 1} из {len(self.figures)}")
 
-        # Обновляем состояние кнопок навигации
         self.prev_btn.config(state=tk.NORMAL if self.current_figure_index > 0 else tk.DISABLED)
         self.next_btn.config(state=tk.NORMAL if self.current_figure_index < len(self.figures) - 1 else tk.DISABLED)
 
@@ -400,13 +398,21 @@ class InterpolationApp:
         if not self.xs or not self.ys:
             messagebox.showerror("Ошибка", "Нет данных для обработки")
             return
+
         if len(set(self.xs)) != len(self.xs):
             messagebox.showerror("Ошибка", "Узлы не должны совпадать")
             return
-        if self.xs != sorted(self.xs):
-            messagebox.showerror("Ошибка", "Узлы должны быть отсортированы")
 
         self.log_text.delete("1.0", tk.END)
+
+        # Проверка сортировки и автоматическая сортировка
+        if self.xs != sorted(self.xs):
+            combined = sorted(zip(self.xs, self.ys))
+            self.xs, self.ys = zip(*combined)
+            self.xs = list(self.xs)
+            self.ys = list(self.ys)
+            self.log("Узлы были неотсортированы. Выполнена автоматическая сортировка по x.")
+
         self.clear_plot_frame()
         self.figures = []
         self.current_figure_index = 0
